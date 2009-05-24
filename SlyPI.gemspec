@@ -1,6 +1,6 @@
 spec = Gem::Specification.new do |s| 
-  s.name = "slypi"
-  s.version = "0.5"
+  s.name = "SlyPI"
+  s.version = "0.6"
   s.author = "JP Hastings-Spital"
   s.email = "slypi@projects.kedakai.co.uk"
   s.homepage = "http://projects.kedakai.co.uk/slypi/"

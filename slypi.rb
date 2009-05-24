@@ -105,8 +105,9 @@ class SlyPI
       $stderr.puts "We've experienced an error attempting to get the information from '#{url}'. More information follows."
       raise
     end
-    
-    return traverse(page.parser,spec['returns'],parameters)
+    output = traverse(page.parser,spec['returns'],parameters)
+    output['_sourceUrl'] = url
+    return output
   end
   
   def traverse(root,items,params)
