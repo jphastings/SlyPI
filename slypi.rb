@@ -55,16 +55,42 @@ class SlyPI
     @description = settings['About']['Description']
     @description.freeze
     @slypi_methods = []
+    @authenticated = true
+    if not settings['Login'].nil?
+      @authenticated = false
+      @slypi_methods.push("login")
+      eval("def login( options = {} )
+        raise \"Please specify a hash of the function terms\" if not options.is_a?(Hash)
+        details = #{settings['Login'].inspect}
+        if send(\"run_function\",details,options)['Success']
+          @authenticated = true
+          return true
+        else
+          $stderr.puts \"Login Failed\"
+          return false
+        end
+      end")
+    end
     
     settings['Functions'].each do |function_name,details|
       if function_name =~ /^[0-9a-zA-Z]+$/
         @slypi_methods.push(function_name)
-        eval("def #{function_name}( options ); raise \"Please specify a hash of the function terms\" if not options.is_a?(Hash);details = #{details.inspect};params = {}; return send(\"run_function\",details,options); end")
+        eval("def #{function_name}( options = {} )
+          raise \"Please specify a hash of the function terms\" if not options.is_a?(Hash)
+          raise \"You're not authenticated.\" if not @authenticated
+          details = #{details.inspect}
+          return send(\"run_function\",details,options)
+        end")
       else
         $stderr.puts "The method '#{function_name}' is not a valid SlyPI method name. Please check your api file!"
       end
     end
     @slypi_methods.freeze
+  end
+  
+  # If the loaded SlyPI requires authentication this will tell you if everything is ready to proceed
+  def authenticated?
+    @authenticated
   end
   
   # Just a standard inspect method at the moment. In the future it will allow you to inspect the dynamically generated methods to find out what they require and other such information
@@ -100,7 +126,12 @@ class SlyPI
     
     url = subst(spec['request']['url'],parameters)
     begin
-      page = @agent.get(url)
+      case spec['request']['method']
+      when "POST"
+        page = @agent.post(url,Hash[*spec['request']['data'].collect{ |opt| [opt[0],parameters[opt[1].to_sym]] }.flatten])
+      else # Includes GET
+        page = @agent.get(url)
+      end
     rescue
       $stderr.puts "We've experienced an error attempting to get the information from '#{url}'. More information follows."
       raise
@@ -119,14 +150,20 @@ class SlyPI
       else
         begin
           el = root.xpath(subst(item[1]['xpath'],params))
-          if item[1]['regex'].nil?
-            output[item[0]] = (el.is_a?(String) or el.length < 2) ? el.inner_text.strip : el.collect{|e| e.inner_text.strip}
-          else
+          if not item[1]['regex'].nil?
             output[item[0]] = (el.is_a?(String) or el.length < 2) ?
               el.inner_text.strip.match(Regexp.new(subst(item[1]['regex'],params),Regexp::MULTILINE))[1] :
               el.collect{ |e|
                 e.inner_text.strip.match(Regexp.new(subst(item[1]['regex'],params),Regexp::MULTILINE))[1]
               }
+          elsif not item[1]['matches'].nil?
+            output[item[0]] = (el.is_a?(String) or el.length < 2) ?
+              (not el.inner_text.strip.match(Regexp.new(subst(item[1]['matches'],params),Regexp::MULTILINE)).nil?) :
+              el.inject(true){ |e|
+                (not e.inner_text.strip.match(Regexp.new(subst(item[1]['matches'],params),Regexp::MULTILINE)).nil?)
+              }
+          else
+            output[item[0]] = (el.is_a?(String) or el.length < 2) ? el.inner_text.strip : el.collect{|e| e.inner_text.strip}
           end
         rescue NoMethodError
         end
