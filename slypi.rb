@@ -146,7 +146,7 @@ class SlyPI
     items.each do |item|
       if item[1].include? "_base"
         cont = item[1].reject{|key,val| key == "_base"}
-        output[item[0]] = root.xpath(item[1]["_base"]).collect{ |hits| traverse(hits,cont,params) }
+        output[item[0]] = root.xpath(subst(item[1]['_base'],params)).collect{ |hits| traverse(hits,cont,params) }
       else
         begin
           el = root.xpath(subst(item[1]['xpath'],params))
