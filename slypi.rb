@@ -128,7 +128,8 @@ class SlyPI
     begin
       case spec['request']['method']
       when "POST"
-        page = @agent.post(url,Hash[*spec['request']['data'].collect{ |opt| [opt[0],parameters[opt[1].to_sym]] }.flatten])
+        p opts = Hash[*spec['request']['data'].collect{ |opt| [opt[0],subst(opt[1],parameters)] }.flatten]
+        page = @agent.post(url,opts)
       else # Includes GET
         page = @agent.get(url)
       end
