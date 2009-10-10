@@ -39,8 +39,8 @@ class SlyPI
     settings = nil
     @agent = WWW::Mechanize.new
     
-    if slypi_file =~ /^http:\/\/.*\.slypi$/
-      cachefname = slypi_file[7,-1].gsub(/[^a-zA-Z0-9]+/,"_")
+    if slypi_file =~ /^http:\/\/(.*\.slypi)$/
+      cachefname = $1.gsub(/[^a-zA-Z0-9\.-]+/,"_")
       if not File.exists?(cachefname)
         open(cachefname,"w") do |file|
           @agent.get(slypi_file) do |page|
