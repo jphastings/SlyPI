@@ -37,12 +37,24 @@ class SlyPI
   # In the future I may get this to accept string settings files too (at the moment, it must be a file)
   def initialize(slypi_file)
     settings = nil
+    @agent = WWW::Mechanize.new
+    
+    if slypi_file =~ /^http:\/\/.*\.slypi$/
+      cachefname = slypi_file[7,-1].gsub(/[^a-zA-Z0-9]+/,"_")
+      if not File.exists?(cachefname)
+        open(cachefname,"w") do |file|
+          @agent.get(slypi_file) do |page|
+            file.write page.body
+          end
+        end
+      end
+      slypi_file = cachefname
+    end
+    
     raise "File not found" if not File.exists?(slypi_file)
     open(slypi_file) do |f|
       settings = YAML.load(f)
     end
-    
-    @agent = WWW::Mechanize.new
     
     @service = settings['About']['Name']
     @service.freeze
